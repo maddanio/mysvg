@@ -44,6 +44,13 @@ add_compile_options(-fno-exceptions)
 include (FetchContent)
 include (cmake/FetchLagom.cmake)
 
+#add_executable(
+#    svg2png2
+#    src/Rasterizer.cpp
+#    src/SVG2PNG.cpp
+#)
+#target_link_libraries(svg2png2 Lagom::Core Lagom::Gfx Lagom::Web Lagom::Main)
+
 add_executable(
     svg2png
     src/Rasterizer.cpp
