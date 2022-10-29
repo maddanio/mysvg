@@ -80,29 +80,6 @@ class NSVGrasterizer
     Gfx::PathPainter _painter;
 
     float tessTol;
-    float distTol;
-
-    AK::Vector<NSVGedge> edges;
-    AK::Vector<NSVGpoint> points;
-    AK::Vector<NSVGpoint> points2;
-
-    int ptEquals(float x1, float y1, float x2, float y2, float tol)
-    {
-        float dx = x2 - x1;
-        float dy = y2 - y1;
-        return dx*dx + dy*dy < tol*tol;
-    }
-
-    static float normalize(float *x, float* y)
-    {
-        float d = sqrtf((*x)*(*x) + (*y)*(*y));
-        if (d > 1e-6f) {
-            float id = 1.0f / d;
-            *x *= id;
-            *y *= id;
-        }
-        return d;
-    }
 
     static float absf(float x) { return x < 0 ? -x : x; }
 
@@ -172,6 +149,7 @@ class NSVGrasterizer
         {
             _painter.begin(
                 {path->pts[0]*scale, path->pts[1]*scale},
+                #if 1
                 (
                     shape.stroke.type != NSVG_PAINT_NONE ?
                     (
@@ -180,7 +158,11 @@ class NSVGrasterizer
                         Gfx::PathPainter::StrokeKind::OpenStroke
                     ) :
                     Gfx::PathPainter::StrokeKind::NoStroke
-                ),
+                )
+                #else
+                    Gfx::PathPainter::StrokeKind::NoStroke
+                #endif
+                ,
                 shape.fill.type != NSVG_PAINT_NONE ? Gfx::PathPainter::FillKind::Filled : Gfx::PathPainter::FillKind::NotFilled,
                 shape.strokeWidth
             );
@@ -198,7 +180,6 @@ public:
     : _painter{image}
     {
         tessTol = 0.25f;
-        distTol = 0.01f;
     }
 
     ~NSVGrasterizer()

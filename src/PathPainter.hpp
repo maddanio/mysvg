@@ -46,10 +46,12 @@ public:
             break;
         }
         if (m_fill_kind == FillKind::Filled)
-            m_fill_painter.begin(p);
+            m_fill_painter.edge_to(p);
     }
     void end(Rasterizer::Paint const& stroke_paint, Rasterizer::Paint const& fill_paint, bool corner)
     {
+        if (m_fill_kind == FillKind::Filled)
+            m_fill_painter.end(fill_paint);
         switch(m_stroke_kind)
         {
         case StrokeKind::OpenStroke:
@@ -59,8 +61,6 @@ public:
         case StrokeKind::NoStroke:
             break;
         }
-        if (m_fill_kind == FillKind::Filled)
-            m_fill_painter.end(fill_paint);
     }
 private:
     StrokePainter m_stroke_painter;
