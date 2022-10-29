@@ -2,6 +2,7 @@
 
 #include "AK/StdLibExtras.h"
 #include "Rasterizer.hpp"
+#include "Userland/Libraries/LibWeb/Bindings/BlobPrototype.h"
 
 namespace Gfx
 {
@@ -10,48 +11,66 @@ class StrokePainter
 public:
     enum class LineEnd {Start, End};
     enum class CapType {Butt, Square, Round};
-    enum class JoinType {Bevel, Miter, Round, Straight};
+    enum class JoinType {Bevel, Miter, Round};
+    enum class EndType {CloseWithCorner, CloseWihoutCorner, Open};
     StrokePainter(Rasterizer::image_t image)
     : m_rasterizer{image}
     {
     }
-    void begin(Rasterizer::point_t p, float thickness)
+    void begin(Rasterizer::point_t p, bool closed, float thickness)
     {
         m_thickness = thickness;
+        m_closed = closed;
         m_first_point = m_current_point = p;
     }
     void stroke_to(Rasterizer::point_t p, bool corner)
     {
         if (m_first)
-            add_cap(LineEnd::Start);
+        {
+            if (m_closed)
+                add_cap(LineEnd::Start);
+        }
+        else if (corner)
+        {
+            add_join(p);
+        }
         else
-            add_join(p, corner);
+        {
+            add_straight_join();
+        }
         m_last_point = m_current_point;
         m_current_point = p;
         m_first = false;
     }
-    void end()
+    void end(Rasterizer::Paint const& paint, bool corner)
     {
-        add_cap(LineEnd::End);
-    }
-    void close()
-    {
-        add_join(m_first_point, false);
+        if (m_closed)
+            stroke_to(m_first_point, corner);
+        else
+            add_cap(LineEnd::End);
+        m_rasterizer.rasterize_edges(Rasterizer::FillRule::nonzero, paint);
     }
 private:
     static Rasterizer::point_t intersect(
         Rasterizer::point_t p1,
+        Rasterizer::point_t d1,
         Rasterizer::point_t p2,
-        Rasterizer::point_t p3,
-        Rasterizer::point_t p4
+        Rasterizer::point_t d2
     )
     {
-        auto den = cross(p1 - p2, p3 - p4);
-        if (abs(den) < 0.00001f)
-            return p2;
+        return intersect(p1, d1, p2, d2, cross(d1, d2));
+    }
+    static Rasterizer::point_t intersect(
+        Rasterizer::point_t p1,
+        Rasterizer::point_t d1,
+        Rasterizer::point_t p2,
+        Rasterizer::point_t d2,
+        float c
+    )
+    {
         return (
-            (p3 - p4) * cross(p1, p2) - (p1 - p2) * cross(p3, p4)
-        ) / den;
+            d2 * cross(p1, p1 + d1) - d1 * cross(p2, p2 + d2)
+        ) / c;
     }
     static float norm(Rasterizer::point_t p)
     {
@@ -73,35 +92,26 @@ private:
     {
         m_rasterizer.add_edge(edge);
     }
-    void add_join(Rasterizer::point_t p, bool corner)
+    void add_join(Rasterizer::point_t p)
     {
+        auto d1 = direction();
+        auto d2 = direction(p);
+        auto c = cross(d1, d2);
+        if (abs(c) < 0.00001)
+            return add_straight_join();
+        auto o2 = normalized(orthogonal(d2)) * (m_thickness / 2);
+        auto l2 = m_current_point - o2;
+        auto r2 = m_current_point + o2;
         // todo: reduce double calculations
-        switch(corner ? m_join_type : JoinType::Straight)
+        switch(m_join_type)
         {
-        case JoinType::Straight: {
-            auto d = direction();
-            auto o = normalized(orthogonal(d)) * (m_thickness / 2);
-            auto left = m_last_point + d - o;
-            auto right = m_last_point + d + o;
-            add_edge({m_left, left});
-            add_edge({m_right, right});
-            m_left = left;
-            m_right = right;
-            break;
-        }
         case JoinType::Bevel: {
-            auto d1 = direction();
-            auto d2 = direction(p);
-            auto c = cross(d1, d2);
-            if (abs(c) < 0.00001)
-                return add_join(p, false);
-            auto o2 = normalized(orthogonal(d2)) * (m_thickness / 2);
             auto m = normalized(orthogonal(d1 - d2));
             if (c > 0)
             {
-                auto left = intersect(m_left, m_left + d1, m_current_point - o2, m_current_point - o2 + d2);
-                auto right1 = intersect(m_right, m_right + d1, m_current_point, m_current_point - m);
-                auto right2 = intersect(m_current_point + o2, m_current_point + o2 + d2, m_current_point, m_current_point + m);
+                auto left = intersect(m_left, d1, l2, d2, c);
+                auto right1 = intersect(m_right, d1, m_current_point, m);
+                auto right2 = intersect(r2, d2, m_current_point, m);
                 add_edge({m_left, left});
                 add_edge({right2, right1});
                 add_edge({right1, m_right});
@@ -110,26 +120,20 @@ private:
             }
             else
             {
-                auto right = intersect(m_right, m_right + d1, m_current_point + o2, m_current_point + o2 + d2);
-                auto left1 = intersect(m_left, m_left + d1, m_current_point, m_current_point - m);
-                auto left2 = intersect(m_current_point - o2, m_current_point - o2 + d2, m_current_point, m_current_point + m);
+                auto right = intersect(m_right, d1, r2, d2, c);
+                auto left1 = intersect(m_left, d1, m_current_point, m);
+                auto left2 = intersect(l2, d2, m_current_point, m);
                 add_edge({right, m_right});
-                add_edge({left2, left1});
-                add_edge({left1, m_left});
-                m_right = right;
+                add_edge({m_left, left1});
+                add_edge({left1, left2});
                 m_left = left2;
+                m_right = right;
             }
             break;
         }
         case JoinType::Miter: {
-            auto d1 = direction();
-            auto d2 = direction(p);
-            auto c = cross(d1, d2);
-            if (abs(c) < 0.00001)
-                return add_join(p, false);
-            auto o2 = normalized(orthogonal(d2)) * (m_thickness / 2);
-            auto left = intersect(m_left, m_left + d1, m_current_point - o2, m_current_point - o2 + d2);
-            auto right = intersect(m_right, m_right + d1, m_current_point + o2, m_current_point + o2 + d2);
+            auto left = intersect(m_left, d1, l2, d2, c);
+            auto right = intersect(m_right, d1, r2, d2, c);
             add_edge({m_left, left});
             add_edge({right, m_right});
             m_left = left;
@@ -137,19 +141,12 @@ private:
             break;
         }
         case JoinType::Round: {
-            break;
-            auto d1 = direction();
-            auto d2 = direction(p);
-            auto c = cross(d1, d2);
-            if (abs(c) < 0.00001)
-                return add_join(p, false);
-            auto o2 = normalized(orthogonal(d2)) * (m_thickness / 2);
             auto m = normalized(orthogonal(d1 - d2));
             if (c > 0)
             {
-                auto left = intersect(m_left, m_left + d1, m_current_point - o2, m_current_point - o2 + d2);
-                auto right1 = intersect(m_right, m_right + d1, m_current_point, m_current_point - m);
-                auto right2 = intersect(m_current_point + o2, m_current_point + o2 + d2, m_current_point, m_current_point + m);
+                auto left = intersect(m_left, d1, l2, d2, c);
+                auto right1 = intersect(m_right, d1, m_current_point, m);
+                auto right2 = intersect(r2, d2, m_current_point, m);
                 add_edge({m_left, left});
                 add_circle_segment(m_current_point, right1, d1, right2, d2);
                 m_left = left;
@@ -157,9 +154,9 @@ private:
             }
             else
             {
-                auto right = intersect(m_right, m_right + d1, m_current_point + o2, m_current_point + o2 + d2);
-                auto left1 = intersect(m_left, m_left + d1, m_current_point, m_current_point - m);
-                auto left2 = intersect(m_current_point - o2, m_current_point - o2 + d2, m_current_point, m_current_point + m);
+                auto right = intersect(m_right, d1, r2, r2 + d2);
+                auto left1 = intersect(m_left, d1, m_current_point, m);
+                auto left2 = intersect(l2, l2 + d2, m_current_point, m);
                 add_edge({right, m_right});
                 add_circle_segment(m_current_point, left2, d2, left1, d1);
                 m_right = right;
@@ -168,6 +165,20 @@ private:
         }
         }
     }
+
+    void add_straight_join()
+    {
+        auto d = direction();
+        auto o = normalized(orthogonal(d)) * (m_thickness / 2);
+        auto left = m_last_point + d - o;
+        auto right = m_last_point + d + o;
+        add_edge({m_left, left});
+        add_edge({m_right, right});
+        m_left = left;
+        m_right = right;
+    }
+
+
     void add_cap(LineEnd end)
     {
         auto d = direction();
@@ -207,14 +218,16 @@ private:
     {
         auto r1 = p1 - c;
         auto r = norm(r1);
-        auto a1 = AK::atan2(d2.x(), d2.y());
+        auto a1 = AK::atan2(-d2.x(), -d2.y());
         auto a2 = AK::atan2(d1.x(), d1.y());
         size_t n_steps = AK::max(1, norm(p2 - p1));
         Rasterizer::point_t last = p1;
         for (size_t i = 0; i < n_steps; ++i)
         {
             auto a = (i + 1) * (a2 - a1) / (n_steps + 1) + a1;
-            Rasterizer::point_t p{AK::sin(a) * r, AK::cos(a) * r};
+            float s, c;
+            AK::sincos(a, s, c);
+            auto p = m_current_point + Rasterizer::point_t{s, c} * r;
             add_edge({last, p});
             last = p;
         }
@@ -230,6 +243,7 @@ private:
     }
     Rasterizer m_rasterizer;
     float m_thickness = 1;
+    bool m_closed;
     bool m_first = true;
     CapType m_cap_type;
     JoinType m_join_type;
