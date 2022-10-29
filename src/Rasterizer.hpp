@@ -1,3 +1,5 @@
+#pragma once
+
 #include <AK/RefPtr.h>
 #include <AK/StdLibExtras.h>
 #include <LibGfx/Color.h>

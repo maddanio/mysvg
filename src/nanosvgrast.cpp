@@ -26,6 +26,7 @@
 #include <LibGfx/Forward.h>
 
 #include "Rasterizer.hpp"
+#include "StrokePainter.hpp"
 #include "nanosvg.h"
 
 #include <math.h>
@@ -87,12 +88,6 @@ class NSVGrasterizer
     AK::Vector<NSVGedge> edges;
     AK::Vector<NSVGpoint> points;
     AK::Vector<NSVGpoint> points2;
-
-    unsigned char* scanline;
-    int cscanline;
-
-    unsigned char* bitmap;
-    int width, height, stride;
 
     int ptEquals(float x1, float y1, float x2, float y2, float tol)
     {
