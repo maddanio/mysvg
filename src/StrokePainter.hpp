@@ -173,7 +173,7 @@ private:
         auto left = m_last_point + d - o;
         auto right = m_last_point + d + o;
         add_edge({m_left, left});
-        add_edge({m_right, right});
+        add_edge({right, m_right});
         m_left = left;
         m_right = right;
     }
