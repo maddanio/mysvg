@@ -12,14 +12,15 @@ void Rasterizer::rasterize_edges(FillRule fill_rule, const Paint& paint)
     // todo: use min-heap?
     for (int i = 0; i < _image->height(); ++i)
     {
-        _active_edges.remove_all_matching([i](auto& e){return e.end <= i;});
+        _active_edges.remove_all_matching([i](auto& e){return e.end <= float(i);});
         for (auto& edge : _active_edges)
             edge.x += edge.dx;
-        // todo: skip gaps without edge
         // todo: use pivot element at the end
-        for(;next_edge != _edges.end() && next_edge->top() <= i;++next_edge)
-            if (next_edge->bottom() > i)
+        for(;next_edge != _edges.end() && next_edge->top() <= float(i);++next_edge)
+        {
+            if (next_edge->bottom() > float(i))
                 _active_edges.append(ActiveEdge{*next_edge});
+        }
         AK::quick_sort(_active_edges, [](auto a, auto b){return a.x < b.x;});
         rasterize_scanline(i, fill_rule, paint);
     }
@@ -40,7 +41,8 @@ Rasterizer::ActiveEdge::ActiveEdge(const Rasterizer::Edge& edge)
     {
         winding = 1;
     }
-    dx = (to.x() - from.x()) / (to.y() - from.y());
+    auto d = to - from;
+    dx = d.x() / d.y();
     x = from.x();
     end = to.y();
 }
@@ -90,7 +92,7 @@ void Rasterizer::fill_scanline(size_t i, float x0, float x1, const Paint& paint)
     auto row = _image->scanline(i);
     size_t first_index = x0;
     size_t last_index = x1;
-    auto start_coverage = 1 - (x0 - first_index);
+    auto start_coverage = first_index + 1 - x0;
     auto end_coverage = x1 - last_index;
     auto put = [row](int i, Gfx::Color color){
         row[i] = Color::from_argb(row[i]).blend(color).value();

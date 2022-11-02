@@ -34,7 +34,8 @@ public:
     }
     void add_edge(Edge edge)
     {
-        _edges.append(edge);
+        if (edge.from.y() != edge.to.y())
+            _edges.append(edge);
     }
     void rasterize_edges(FillRule fill_rule, const Paint& paint);
 private:

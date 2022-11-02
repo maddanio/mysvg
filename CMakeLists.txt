@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(libjs-test262 CXX)
+project(mysvg CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -56,5 +56,5 @@ add_executable(
     src/Rasterizer.cpp
     src/nanosvgrast.cpp
 )
-target_link_libraries(svg2png Lagom::Core Lagom::Gfx)
+target_link_libraries(svg2png Lagom::Core Lagom::Gfx Lagom::Main)
 #install(TARGETS libjs-test262-runner RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX})
