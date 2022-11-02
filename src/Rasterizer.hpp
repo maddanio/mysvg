@@ -43,7 +43,7 @@ private:
     {
         float x, dx, end;
         int winding;
-        ActiveEdge(const Edge& edge);
+        ActiveEdge(const Edge& edge, float y);
     };
     void rasterize_scanline(size_t i, FillRule fill_rule, const Paint& paint);
     void fill_scanline(size_t i, float x0, float x1, const Paint& paint);

@@ -12,14 +12,15 @@ void Rasterizer::rasterize_edges(FillRule fill_rule, const Paint& paint)
     // todo: use min-heap?
     for (int i = 0; i < _image->height(); ++i)
     {
-        _active_edges.remove_all_matching([i](auto& e){return e.end <= float(i);});
+        auto scany = i + 0.5f;
+        _active_edges.remove_all_matching([scany](auto& e){return e.end <= scany;});
         for (auto& edge : _active_edges)
             edge.x += edge.dx;
         // todo: use pivot element at the end
-        for(;next_edge != _edges.end() && next_edge->top() <= float(i);++next_edge)
+        for(;next_edge != _edges.end() && next_edge->top() <= scany;++next_edge)
         {
-            if (next_edge->bottom() > float(i))
-                _active_edges.append(ActiveEdge{*next_edge});
+            if (next_edge->bottom() > scany)
+                _active_edges.append(ActiveEdge{*next_edge, scany});
         }
         AK::quick_sort(_active_edges, [](auto a, auto b){return a.x < b.x;});
         rasterize_scanline(i, fill_rule, paint);
@@ -28,7 +29,7 @@ void Rasterizer::rasterize_edges(FillRule fill_rule, const Paint& paint)
     _active_edges.clear();
 }
 
-Rasterizer::ActiveEdge::ActiveEdge(const Rasterizer::Edge& edge)
+Rasterizer::ActiveEdge::ActiveEdge(const Rasterizer::Edge& edge, float y)
 {
     auto from = edge.from;
     auto to = edge.to;
@@ -43,7 +44,7 @@ Rasterizer::ActiveEdge::ActiveEdge(const Rasterizer::Edge& edge)
     }
     auto d = to - from;
     dx = d.x() / d.y();
-    x = from.x();
+    x = from.x() + dx * (y - from.y());
     end = to.y();
 }
 
