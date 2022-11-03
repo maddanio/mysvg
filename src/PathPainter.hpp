@@ -23,7 +23,6 @@ public:
 
     AK::ErrorOr<void> begin(point_t p, StrokeKind stroke_kind, FillKind fill_kind, float thickness = 0)
     {
-        printf("-begin\n");
         m_stroke_kind = stroke_kind;
         m_fill_kind = fill_kind;
         m_thickness = thickness;
@@ -38,7 +37,6 @@ public:
         point_t p4
     )
     {
-        printf("-bezier\n");
         TRY(flatten_cubic_bezier(m_position, p2, p3, p4));
         m_position = p4;
         return {};
@@ -63,11 +61,10 @@ public:
         return {};
     }
 
-    AK::ErrorOr<void> end(Rasterizer::Paint const& stroke_paint, Rasterizer::Paint const& fill_paint)
+    AK::ErrorOr<void> end(Rasterizer::Paint const& stroke_paint)
     {
-        printf("-end\n");
         if (m_fill_kind == FillKind::Filled)
-            m_fill_painter.end(fill_paint);
+            m_fill_painter.end();
         switch(m_stroke_kind)
         {
         case StrokeKind::OpenStroke:
@@ -78,6 +75,12 @@ public:
             break;
         }
         return {};
+    }
+
+    void end_shape(Rasterizer::Paint const& paint)
+    {
+        if (m_fill_kind == FillKind::Filled)
+            m_fill_painter.end_shape(paint);
     }
 
 private:

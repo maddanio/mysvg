@@ -20,9 +20,13 @@ public:
         m_rasterizer.add_edge({m_current_point, p});
         m_current_point = p;
     }
-    void end(Rasterizer::Paint const& paint)
+    void end()
     {
         m_rasterizer.add_edge({m_current_point, m_first_point});
+
+    }
+    void end_shape(Rasterizer::Paint const& paint)
+    {
         m_rasterizer.rasterize_edges(Rasterizer::FillRule::evenodd, paint);
     }
 private:

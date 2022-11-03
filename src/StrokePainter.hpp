@@ -23,7 +23,6 @@ public:
     }
     AK::ErrorOr<void> begin(point_t p, bool closed, float thickness)
     {
-        printf(">begin %f,%f,%s\n",p.x(), p.y(), closed?"closed":"");
         m_thickness = thickness;
         m_closed = closed;
         m_first_point = m_current_point = p;
@@ -34,7 +33,6 @@ public:
     {
         if (p.distance_from(m_current_point) < 0.1f)
             return {};
-        printf(">%f,%f,%s\n",p.x(), p.y(), corner?"corner":"");
         if (m_first)
         {
             m_second_point = p;
@@ -64,10 +62,8 @@ public:
     }
     AK::ErrorOr<void> end(Rasterizer::Paint const& paint)
     {
-        printf("<end\n");
         if (m_first)
         {
-            printf(">end\n");
             return {};
         }
         if (m_closed)
@@ -81,7 +77,6 @@ public:
             add_cap(m_last_point);
         }
         m_rasterizer.rasterize_edges(Rasterizer::FillRule::nonzero, paint);
-        printf(">end\n");
         return {};
     }
 private:
@@ -109,8 +104,6 @@ private:
     static float norm(point_t p)
     {
         auto result = AK::sqrt(p.x() * p.x() + p.y() * p.y());
-        if (result < 0.0001f)
-            printf("norm %f\n", result);
         return result;
     }
     static point_t normalized(point_t p)
@@ -159,7 +152,6 @@ private:
             if (c > 0)
             {
                 auto left = intersect(m_left, d1, l2, d2, c);
-                printf("left %f,%f\n", left.x(), left.y());
                 add_edge({m_left, left});
                 add_edge({r2, r1});
                 add_edge({r1, m_right});
@@ -169,7 +161,6 @@ private:
             else
             {
                 auto right = intersect(m_right, d1, r2, d2, c);
-                printf("right %f,%f\n", right.x(), right.y());
                 add_edge({right, m_right});
                 add_edge({m_left, l1});
                 add_edge({l1, l2});
@@ -219,7 +210,6 @@ private:
 
     void add_cap(point_t towards)
     {
-        printf("cap\n");
         auto d = direction(towards);
         auto o = offset(d);
         m_left = m_current_point - o;
@@ -297,7 +287,7 @@ private:
     bool m_closed;
     bool m_first = true;
     CapType m_cap_type = CapType::Butt;
-    JoinType m_join_type = JoinType::Round;
+    JoinType m_join_type = JoinType::Bevel;
     point_t m_first_point;
     point_t m_second_point;
     point_t m_left;

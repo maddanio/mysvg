@@ -81,6 +81,7 @@ class NSVGrasterizer
 
     void flatten_shape(const NSVGshape& shape, float scale)
     {
+        printf("shape\n");
         auto convert_paint = [](const NSVGpaint& paint)
         {
             int color = 0xffffff;
@@ -104,6 +105,7 @@ class NSVGrasterizer
         };
         for (auto path = shape.paths; path != NULL; path = path->next)
         {
+            printf("path\n");
             MUST(_painter.begin(
                 {path->pts[0] * scale, path->pts[1] * scale},
                 (
@@ -120,6 +122,7 @@ class NSVGrasterizer
                 shape.strokeWidth * scale
             ));
             for (int i = 0; i < path->npts-1; i += 3) {
+                printf("curve\n");
                 float* p = &path->pts[i*2];
                 MUST(_painter.cubic_bezier_to(
                     {p[2]*scale,p[3]*scale},
@@ -127,8 +130,9 @@ class NSVGrasterizer
                     {p[6]*scale,p[7]*scale}
                 ));
             }
-            MUST(_painter.end(convert_paint(shape.stroke), convert_paint(shape.fill)));
+            MUST(_painter.end(convert_paint(shape.stroke)));
         }
+        _painter.end_shape(convert_paint(shape.fill));
     }
 
 public:
