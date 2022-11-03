@@ -173,6 +173,7 @@ public:
 #include <LibGfx/Bitmap.h>
 #include <LibGfx/PNGWriter.h>
 #include <LibMain/Main.h>
+#include "time.h"
 #include "stdio.h"
 
 ErrorOr<int> serenity_main(Main::Arguments args)
@@ -183,7 +184,10 @@ ErrorOr<int> serenity_main(Main::Arguments args)
     size_t h = svg->height * scale;
     auto image = MUST(Gfx::Bitmap::try_create(Gfx::BitmapFormat::BGRA8888, Gfx::IntSize{w, h}));
     NSVGrasterizer rasterizer{image};
+    auto start = clock();
     rasterizer.run(svg, scale);
+    auto end = clock();
+    printf("painting took %.3fs\n", float(end - start) / CLOCKS_PER_SEC);
     auto encoded = Gfx::PNGWriter::encode(image);
     auto out = fopen("svg.png", "w");
     fwrite(encoded.data(), encoded.size(), 1, out);

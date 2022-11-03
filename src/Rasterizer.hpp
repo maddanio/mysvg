@@ -33,6 +33,7 @@ public:
     : _image{image}
     , _painter{*_image}
     {
+        _coverage.resize(_image->width());
     }
     void add_edge(Edge edge)
     {
@@ -47,10 +48,14 @@ private:
         int winding;
         ActiveEdge(const Edge& edge, float y);
     };
-    void rasterize_scanline(size_t i, FillRule fill_rule, const Paint& paint);
-    void fill_scanline(size_t i, float x0, float x1, const Paint& paint);
+    void rasterize_scanline(FillRule fill_rule);
+    void update_coverage(float x0, float x1);
+    void fill_scanline(size_t i, const Paint& paint);
+    static constexpr uint8_t _oversampling = 5;
+    size_t _min_col, _max_col;
     image_t _image;
     Painter _painter;
+    AK::Vector<uint8_t> _coverage;
     AK::Vector<Edge> _edges;
     AK::Vector<ActiveEdge> _active_edges;
 };
