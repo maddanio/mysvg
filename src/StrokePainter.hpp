@@ -118,7 +118,7 @@ private:
     }
     static point_t left(point_t p)
     {
-        return normalized(point_t{-p.y(), p.x()});
+        return point_t{-p.y(), p.x()};
     }
     point_t offset(point_t d) const
     {
@@ -132,7 +132,6 @@ private:
     {
         auto d1 = direction();
         auto d2 = direction(p);
-        auto c = cross(d1, d2);
         auto o1 = offset(d1);
         auto o2 = offset(d2);
         auto l1 = m_current_point - o1;
@@ -150,7 +149,7 @@ private:
         }
         case JoinType::Miter: {
             printf("miter\n");
-            auto o1 = offset(d1);
+            auto c = cross(d1, d2);
             if (c > 0)
             {
                 auto r1 = m_current_point + o1;
@@ -174,6 +173,7 @@ private:
             break;
         }
         case JoinType::Round: {
+            auto c = cross(d1, d2);
             auto m = left(d1 - d2);
             if (c > 0)
             {

@@ -7,7 +7,7 @@ namespace Gfx {
 
 void Rasterizer::rasterize_edges(FillRule fill_rule, const Paint& paint)
 {
-    #if 1
+    #if 0
     for (auto& edge : _edges)
         _painter.draw_line(Point<int>(edge.from), Point<int>(edge.to), Color::White);
     return;
