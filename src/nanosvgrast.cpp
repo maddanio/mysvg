@@ -105,6 +105,7 @@ class NSVGrasterizer
         for (auto path = shape.paths; path != NULL; path = path->next)
         {
             MUST(_painter.begin(
+                {path->pts[0] * scale, path->pts[1] * scale},
                 (
                     shape.stroke.type != NSVG_PAINT_NONE ?
                     (
@@ -120,8 +121,7 @@ class NSVGrasterizer
             ));
             for (int i = 0; i < path->npts-1; i += 3) {
                 float* p = &path->pts[i*2];
-                MUST(_painter.cubic_bezier(
-                    {p[0]*scale, p[1]*scale},
+                MUST(_painter.cubic_bezier_to(
                     {p[2]*scale,p[3]*scale},
                     {p[4]*scale,p[5]*scale},
                     {p[6]*scale,p[7]*scale}

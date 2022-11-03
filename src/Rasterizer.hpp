@@ -8,6 +8,7 @@
 #include <AK/RefCounted.h>
 #include <LibGfx/Point.h>
 #include <LibGfx/Bitmap.h>
+#include <LibGfx/Painter.h>
 
 namespace Gfx {
 
@@ -30,6 +31,7 @@ public:
     enum class FillRule {nonzero, evenodd};
     Rasterizer(image_t image)
     : _image{image}
+    , _painter{*_image}
     {
     }
     void add_edge(Edge edge)
@@ -48,6 +50,7 @@ private:
     void rasterize_scanline(size_t i, FillRule fill_rule, const Paint& paint);
     void fill_scanline(size_t i, float x0, float x1, const Paint& paint);
     image_t _image;
+    Painter _painter;
     AK::Vector<Edge> _edges;
     AK::Vector<ActiveEdge> _active_edges;
 };

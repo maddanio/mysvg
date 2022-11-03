@@ -7,6 +7,11 @@ namespace Gfx {
 
 void Rasterizer::rasterize_edges(FillRule fill_rule, const Paint& paint)
 {
+    #if 1
+    for (auto& edge : _edges)
+        _painter.draw_line(Point<int>(edge.from), Point<int>(edge.to), Color::White);
+    return;
+    #endif
     AK::quick_sort(_edges, [](auto a, auto b){return a.top() < b.top();});
     auto next_edge = _edges.begin();
     // todo: use min-heap?

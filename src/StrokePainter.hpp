@@ -22,6 +22,7 @@ public:
     }
     AK::ErrorOr<void> begin(point_t p, bool closed, float thickness)
     {
+        printf(">%f,%f,%s\n",p.x(), p.y(), closed?"closed":"");
         if (m_began)
             return AK::Error::from_string_literal("stroke already begun");
         m_thickness = thickness;
@@ -32,6 +33,7 @@ public:
     }
     AK::ErrorOr<void> stroke_to(point_t p, bool corner)
     {
+        printf(">%f,%f,%s\n",p.x(), p.y(), corner?"corner":"");
         if (!m_began)
             return AK::Error::from_string_literal("stroke not begun");
         if (m_first)
@@ -63,6 +65,7 @@ public:
     }
     AK::ErrorOr<void> end(Rasterizer::Paint const& paint)
     {
+        printf(">end\n");
         if (m_closed)
         {
             TRY(stroke_to(m_first_point, false));
@@ -100,7 +103,10 @@ private:
     }
     static float norm(point_t p)
     {
-        return AK::sqrt(p.x() * p.x() + p.y() * p.y());
+        auto result = AK::sqrt(p.x() * p.x() + p.y() * p.y());
+        if (result < 0.0001f)
+            printf("norm %f\n", result);
+        return result;
     }
     static point_t normalized(point_t p)
     {
@@ -108,7 +114,7 @@ private:
     }
     static float cross(point_t p1, point_t p2)
     {
-        return p1.x() * p2.y() - p1.y() - p2.x();
+        return p1.x() * p2.y() - p1.y() * p2.x();
     }
     static point_t left(point_t p)
     {
@@ -124,7 +130,6 @@ private:
     }
     void add_join(point_t p)
     {
-        printf("join\n");
         auto d1 = direction();
         auto d2 = direction(p);
         auto c = cross(d1, d2);
@@ -133,7 +138,6 @@ private:
         auto o2 = offset(d2);
         auto l2 = m_current_point - o2;
         auto r2 = m_current_point + o2;
-        // todo: reduce double calculations
         switch(m_join_type)
         {
         case JoinType::Bevel: {
@@ -163,12 +167,28 @@ private:
             break;
         }
         case JoinType::Miter: {
-            auto left = intersect(m_left, d1, l2, d2, c);
-            auto right = intersect(m_right, d1, r2, d2, c);
-            add_edge({m_left, left});
-            add_edge({right, m_right});
-            m_left = left;
-            m_right = right;
+            printf("miter\n");
+            auto o1 = offset(d1);
+            if (c > 0)
+            {
+                auto r1 = m_current_point + o1;
+                auto left = intersect(m_left, d1, l2, d2, c);
+                add_edge({m_left, left});
+                add_edge({r2, r1});
+                add_edge({r1, m_right});
+                m_left = left;
+                m_right = r2;
+            }
+            else
+            {
+                auto l1 = m_current_point - o1;
+                auto right = intersect(m_right, d1, r2, d2, c);
+                add_edge({right, m_right});
+                add_edge({m_left, l1});
+                add_edge({l1, l2});
+                m_left = l2;
+                m_right = right;
+            }
             break;
         }
         case JoinType::Round: {
@@ -200,6 +220,8 @@ private:
     void add_straight_join()
     {
         auto d = direction();
+        if (AK::max(AK::abs(d.x()), AK::abs(d.y())) < 0.01f)
+            return;
         auto o = offset(d);
         auto left = m_current_point - o;
         auto right = m_current_point + o;
@@ -266,11 +288,11 @@ private:
     }
     point_t direction() const
     {
-        return m_current_point - m_last_point;
+        return normalized(m_current_point - m_last_point);
     }
     point_t direction(point_t next) const
     {
-        return next - m_current_point;
+        return normalized(next - m_current_point);
     }
     Rasterizer m_rasterizer;
     float m_thickness = 1;
