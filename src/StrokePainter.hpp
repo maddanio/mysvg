@@ -5,6 +5,7 @@
 #include "Rasterizer.hpp"
 
 #include "stdio.h"
+#include <cmath>
 
 namespace Gfx
 {
@@ -257,6 +258,16 @@ private:
         auto r2 = p2 - c;
         auto a1 = AK::atan2(r1.x(), r1.y());
         auto a2 = AK::atan2(r2.x(), r2.y());
+        if (cross(r1, r2) < 0)
+        {
+            if (a1 > a2)
+                a1 -= 2 * M_PI;
+        }
+        else
+        {
+            if (a1 < a2)
+                a2 -= 2 * M_PI;
+        }
         size_t n_steps = AK::max(1, p1.distance_from(p2));
         point_t last = p1;
         for (size_t i = 0; i < n_steps; ++i)
