@@ -22,25 +22,23 @@ public:
     }
     AK::ErrorOr<void> begin(point_t p, bool closed, float thickness)
     {
-        printf(">%f,%f,%s\n",p.x(), p.y(), closed?"closed":"");
-        if (m_began)
-            return AK::Error::from_string_literal("stroke already begun");
+        printf(">begin %f,%f,%s\n",p.x(), p.y(), closed?"closed":"");
         m_thickness = thickness;
         m_closed = closed;
         m_first_point = m_current_point = p;
-        m_began = true;
+        m_first = true;
         return {};
     }
     AK::ErrorOr<void> stroke_to(point_t p, bool corner)
     {
+        if (p.distance_from(m_current_point) < 0.1f)
+            return {};
         printf(">%f,%f,%s\n",p.x(), p.y(), corner?"corner":"");
-        if (!m_began)
-            return AK::Error::from_string_literal("stroke not begun");
         if (m_first)
         {
+            m_second_point = p;
             if (m_closed)
             {
-                m_second_point = p;
                 auto o = offset(direction(p));
                 m_left = m_current_point - o;
                 m_right = m_current_point + o;
@@ -65,10 +63,16 @@ public:
     }
     AK::ErrorOr<void> end(Rasterizer::Paint const& paint)
     {
-        printf(">end\n");
+        printf("<end\n");
+        if (m_first)
+        {
+            printf(">end\n");
+            return {};
+        }
         if (m_closed)
         {
-            TRY(stroke_to(m_first_point, false));
+            if (m_current_point.distance_from(m_first_point) > 0.1f)
+                TRY(stroke_to(m_first_point, true));
             TRY(stroke_to(m_second_point, true));
         }
         else
@@ -76,7 +80,7 @@ public:
             add_cap(m_last_point);
         }
         m_rasterizer.rasterize_edges(Rasterizer::FillRule::nonzero, paint);
-        m_began = false;
+        printf(">end\n");
         return {};
     }
 private:
@@ -282,7 +286,6 @@ private:
     float m_thickness = 1;
     bool m_closed;
     bool m_first = true;
-    bool m_began = false;
     CapType m_cap_type = CapType::Butt;
     JoinType m_join_type = JoinType::Bevel;
     point_t m_first_point;
