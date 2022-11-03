@@ -101,7 +101,7 @@ private:
         float c
     )
     {
-        return (
+        return -(
             d2 * cross(p1, p1 + d1) - d1 * cross(p2, p2 + d2)
         ) / c;
     }
@@ -149,15 +149,16 @@ private:
             add_edge({l1, l2});
             add_edge({r2, r1});
             add_edge({r1, m_right});
+            m_left = l2;
+            m_right = r2;
             break;
         }
         case JoinType::Miter: {
-            printf("miter\n");
             auto c = cross(d1, d2);
             if (c > 0)
             {
-                auto r1 = m_current_point + o1;
                 auto left = intersect(m_left, d1, l2, d2, c);
+                printf("left %f,%f\n", left.x(), left.y());
                 add_edge({m_left, left});
                 add_edge({r2, r1});
                 add_edge({r1, m_right});
@@ -166,8 +167,8 @@ private:
             }
             else
             {
-                auto l1 = m_current_point - o1;
                 auto right = intersect(m_right, d1, r2, d2, c);
+                printf("right %f,%f\n", right.x(), right.y());
                 add_edge({right, m_right});
                 add_edge({m_left, l1});
                 add_edge({l1, l2});
@@ -201,8 +202,6 @@ private:
             }
         }
         }
-        m_left = l2;
-        m_right = r2;
     }
 
     void add_straight_join()
@@ -287,7 +286,7 @@ private:
     bool m_closed;
     bool m_first = true;
     CapType m_cap_type = CapType::Butt;
-    JoinType m_join_type = JoinType::Bevel;
+    JoinType m_join_type = JoinType::Miter;
     point_t m_first_point;
     point_t m_second_point;
     point_t m_left;
