@@ -102,6 +102,8 @@ class NSVGrasterizer
                 }
             };
         };
+        auto stroke_paint = convert_paint(shape.stroke);
+        auto fill_paint = convert_paint(shape.fill);
         for (auto path = shape.paths; path != NULL; path = path->next)
         {
             MUST(_painter.begin(
@@ -127,9 +129,9 @@ class NSVGrasterizer
                     {p[6]*scale,p[7]*scale}
                 ));
             }
-            MUST(_painter.end(convert_paint(shape.stroke)));
+            MUST(_painter.end(stroke_paint));
         }
-        _painter.end_shape(convert_paint(shape.fill));
+        _painter.end_shape(fill_paint);
     }
 
 public:
