@@ -133,37 +133,19 @@ private:
         auto d1 = direction();
         auto d2 = direction(p);
         auto c = cross(d1, d2);
-        if (abs(c) < 0.00001)
-            return add_straight_join();
+        auto o1 = offset(d1);
         auto o2 = offset(d2);
+        auto l1 = m_current_point - o1;
+        auto r1 = m_current_point + o1;
         auto l2 = m_current_point - o2;
         auto r2 = m_current_point + o2;
         switch(m_join_type)
         {
         case JoinType::Bevel: {
-            auto m = left(d1 - d2);
-            if (c > 0)
-            {
-                auto left = intersect(m_left, d1, l2, d2, c);
-                auto right1 = intersect(m_right, d1, m_current_point, m);
-                auto right2 = intersect(r2, d2, m_current_point, m);
-                add_edge({m_left, left});
-                add_edge({right2, right1});
-                add_edge({right1, m_right});
-                m_left = left;
-                m_right = right2;
-            }
-            else
-            {
-                auto right = intersect(m_right, d1, r2, d2, c);
-                auto left1 = intersect(m_left, d1, m_current_point, m);
-                auto left2 = intersect(l2, d2, m_current_point, m);
-                add_edge({right, m_right});
-                add_edge({m_left, left1});
-                add_edge({left1, left2});
-                m_left = left2;
-                m_right = right;
-            }
+            add_edge({m_left, l1});
+            add_edge({l1, l2});
+            add_edge({r2, r1});
+            add_edge({r1, m_right});
             break;
         }
         case JoinType::Miter: {
@@ -215,6 +197,8 @@ private:
             }
         }
         }
+        m_left = l2;
+        m_right = r2;
     }
 
     void add_straight_join()
@@ -300,7 +284,7 @@ private:
     bool m_first = true;
     bool m_began = false;
     CapType m_cap_type = CapType::Butt;
-    JoinType m_join_type = JoinType::Miter;
+    JoinType m_join_type = JoinType::Bevel;
     point_t m_first_point;
     point_t m_second_point;
     point_t m_left;
