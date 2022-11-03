@@ -179,26 +179,23 @@ private:
         }
         case JoinType::Round: {
             auto c = cross(d1, d2);
-            auto m = left(d1 - d2);
             if (c > 0)
             {
-                auto left = intersect(m_left, d1, l2, d2, c);
-                auto right1 = intersect(m_right, d1, m_current_point, m);
-                auto right2 = intersect(r2, d2, m_current_point, m);
-                add_edge({m_left, left});
-                add_circle_segment(m_current_point, right1, d1, right2, d2);
-                m_left = left;
-                m_right = right2;
+                add_edge({m_left, l1});
+                add_circle_segment(m_current_point, l1, l2);
+                add_edge({r2, r1});
+                add_edge({r1, m_right});
+                m_left = l2;
+                m_right = r2;
             }
             else
             {
-                auto right = intersect(m_right, d1, r2, r2 + d2);
-                auto left1 = intersect(m_left, d1, m_current_point, m);
-                auto left2 = intersect(l2, l2 + d2, m_current_point, m);
-                add_edge({right, m_right});
-                add_circle_segment(m_current_point, left2, d2, left1, d1);
-                m_right = right;
-                m_left = left2;
+                add_edge({m_left, l1});
+                add_edge({l1, l2});
+                add_circle_segment(m_current_point, r2, r1);
+                add_edge({r1, m_right});
+                m_left = l2;
+                m_right = r2;
             }
         }
         }
@@ -243,28 +240,28 @@ private:
         }
         case CapType::Round:
         {
-            add_circle_segment(m_current_point, m_right, d, m_left, d);
+            add_circle_segment(m_current_point, m_right, m_left);
             break;
         }
         }
     }
+
     void add_circle_segment(
         point_t c,
         point_t p1,
-        point_t d1,
-        point_t p2,
-        point_t d2
+        point_t p2
     )
     {
+        auto r = p1.distance_from(c);
         auto r1 = p1 - c;
-        auto r = norm(r1);
-        auto a1 = AK::atan2(-d2.x(), -d2.y());
-        auto a2 = AK::atan2(d1.x(), d1.y());
-        size_t n_steps = AK::max(1, norm(p2 - p1));
+        auto r2 = p2 - c;
+        auto a1 = AK::atan2(r1.x(), r1.y());
+        auto a2 = AK::atan2(r2.x(), r2.y());
+        size_t n_steps = AK::max(1, p1.distance_from(p2));
         point_t last = p1;
         for (size_t i = 0; i < n_steps; ++i)
         {
-            auto a = (i + 1) * (a2 - a1) / (n_steps + 1) + a1;
+            auto a = a1 + float(i + 1) / float(n_steps + 1) * (a2 - a1);
             float s, c;
             AK::sincos(a, s, c);
             auto p = m_current_point + point_t{s, c} * r;
@@ -273,20 +270,23 @@ private:
         }
         add_edge({last, p2});
     }
+
     point_t direction() const
     {
         return normalized(m_current_point - m_last_point);
     }
+
     point_t direction(point_t next) const
     {
         return normalized(next - m_current_point);
     }
+
     Rasterizer m_rasterizer;
     float m_thickness = 1;
     bool m_closed;
     bool m_first = true;
     CapType m_cap_type = CapType::Butt;
-    JoinType m_join_type = JoinType::Miter;
+    JoinType m_join_type = JoinType::Round;
     point_t m_first_point;
     point_t m_second_point;
     point_t m_left;
