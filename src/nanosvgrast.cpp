@@ -25,6 +25,7 @@
 #include <AK/Try.h>
 #include <LibGfx/Forward.h>
 
+#include "Gradients.hpp"
 #include "PathPainter.hpp"
 #include "nanosvg.h"
 
@@ -83,24 +84,25 @@ class NSVGrasterizer
     {
         auto convert_paint = [](const NSVGpaint& paint)
         {
-            int color = 0xffffff;
-            switch(paint.type)
-            {
-            case NSVG_PAINT_COLOR:
-                color = paint.color;
-                break;
-            case NSVG_PAINT_LINEAR_GRADIENT:
-                color = paint.gradient->stops[0].color;
-                break;
-            }
-            return Gfx::Rasterizer::Paint{
-                .color = Gfx::Rasterizer::color_t{
+            auto convert_color = [](int color){
+                return Color{
                     static_cast<unsigned char>(color & 0xff),
                     static_cast<unsigned char>((color >> 8) & 0xff),
                     static_cast<unsigned char>((color >> 16) & 0xff),
                     static_cast<unsigned char>((color >> 24) & 0xff),
-                }
+                };
             };
+            switch(paint.type)
+            {
+            case NSVG_PAINT_COLOR:
+                return Gfx::Rasterizer::Paint{
+                    .coloring = convert_color(paint.color)
+                };
+            case NSVG_PAINT_LINEAR_GRADIENT:
+                return Gfx::Rasterizer::Paint{
+                    .coloring = convert_color(paint.gradient->stops[0].color)
+                };
+            }
         };
         auto stroke_paint = convert_paint(shape.stroke);
         auto fill_paint = convert_paint(shape.fill);

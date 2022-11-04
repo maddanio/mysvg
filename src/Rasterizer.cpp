@@ -35,7 +35,16 @@ void Rasterizer::rasterize_edges(FillRule fill_rule, const Paint& paint)
             rasterize_scanline(fill_rule);
         }
         if (_min_col <= _max_col)
-            fill_scanline(i, paint);
+        {
+            paint.coloring.visit(
+                [&](Color color){
+                    fill_scanline_solid(i, color);
+                },
+                [&](const LinearGradient& gradient){
+                    fill_scanline_linear_gradient(i, gradient);
+                }
+            );
+        }
     }
     _edges.clear();
     _active_edges.clear();
@@ -123,12 +132,23 @@ void Rasterizer::update_coverage(float x0, float x1)
     }
 }
 
-void Rasterizer::fill_scanline(size_t i, const Paint& paint)
+void Rasterizer::fill_scanline_solid(size_t i, Color in_color)
 {
     auto row = _image->scanline(i);
     for (size_t j = _min_col; j <= _max_col; ++j)
     {
-        auto color = paint.color.with_alpha((uint16_t(paint.color.alpha()) * _coverage[j]) >> 8);
+        auto color = in_color.with_alpha((uint16_t(in_color.alpha()) * _coverage[j]) >> 8);
+        row[j] = Color::from_argb(row[j]).blend(color).value();
+    }
+}
+
+void Rasterizer::fill_scanline_linear_gradient(size_t i, const LinearGradient& gradient)
+{
+    auto row = _image->scanline(i);
+    for (size_t j = _min_col; j <= _max_col; ++j)
+    {
+        auto in_color = gradient({j, i});
+        auto color = in_color.with_alpha((uint16_t(in_color.alpha()) * _coverage[j]) >> 8);
         row[j] = Color::from_argb(row[j]).blend(color).value();
     }
 }
